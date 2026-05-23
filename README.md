@@ -4,62 +4,101 @@ To miejsce służy jako centralny zbiór moich rozwiązań i projektów realizow
 
 Wszystkie znajdujące się tutaj pliki (głównie skrypty w języku Python oraz notatniki `.ipynb` Jupyter/Google Colab) stanowią odpowiedź na zadania stawiane podczas poszczególnych etapów laboratoriów.
 
-# Raport z Laboratorium nr 6: Predykcja Cen Akcji (LSTM vs GRU)
+# Raport z Laboratorium nr 6: Rekurencyjne Sieci Neuronowe (LSTM vs GRU)
 
-## Cel zadania
-Zbudowanie i optymalizacja rekurencyjnych sieci neuronowych (RNN) do przewidywania kursu giełdowego, oraz analiza wpływu różnych hiperparametrów na dokładność predykcji.
-
----
-
-## Baza: Porównanie LSTM i GRU
-Zbudowałem dwie analogiczne sieci: jedną opartą na warstwach LSTM, drugą na GRU.
-**Obserwacje:** Sieci GRU trenowały się odczuwalnie szybciej (krótszy czas wykonania jednej epoki: [TUTAJ WPISZ CZASY]), co wynika z braku bramki wyjściowej (output gate) w jej komórkach. Pomimo prostszej budowy, wyniki błędu były porównywalne, a czasami nawet lepsze dla GRU.
-
-*[TUTAJ DODAJ SCREENY LOGÓW Z TRENINGU LSTM I GRU]*
+## Cel projektu
+Celem ćwiczenia było zaprojektowanie, implementacja oraz optymalizacja rekurencyjnych sieci neuronowych (RNN) opartych na bramkach LSTM oraz GRU do prognozowania szeregów czasowych na przykładzie cen akcji firmy IBM. W ramach laboratorium przeprowadzono serię eksperymentów badających wpływ hiperparametrów (liczby jednostek, optymalizatorów, funkcji straty, doboru cech oraz mechanizmu wczesnego zatrzymywania) na końcową precyzję modelu, ocenianą za pomocą metryki RMSE.
 
 ---
 
-## A. Eksperymenty z ilością jednostek (Units)
-Testowałem wartości: 20, 50, 128. 
-**Obserwacje:** Przy bardzo małej liczbie jednostek (20), model miał problem z odwzorowaniem skomplikowanych kształtów wykresu. Przy 128 jednostkach sieć trenowała się znacznie dłużej i istniało ryzyko overfittingu, choć dokładnie dopasowywała się do danych treningowych. Złotym środkiem okazała się wartość w okolicach 50-64.
+## Baza: Porównanie architektur LSTM i GRU (prędkość uczenia)
 
-*[TUTAJ DODAJ SCREENY WYKRESÓW DLA MAŁEJ I DUŻEJ LICZBY UNITS]*
+W pierwszej fazie porównano bazowe konfiguracje sieci LSTM oraz GRU. Obie sieci składały się z 4 warstw ukrytych po 50 jednostek i były trenowane z rozmiarem paczki (batch size) równym 32.
 
----
+### Prędkość uczenia
+* **LSTM:** Architektura LSTM wymagała dłuższego czasu na wykonanie pojedynczej epoki treningowej. Wynika to ze złożonej struktury wewnętrznej komórki, która posiada trzy bramki (wejściową, wyjściową i zapominania).
+* **GRU:** Architektura GRU charakteryzowała się wyższą efektywnością obliczeniową. Krótszy czas epoki jest bezpośrednim rezultatem uproszczonej konstrukcji komórki, która integruje operacje w dwie bramki (aktualizacji i resetowania).
 
-## B & C. Testowanie Optymalizatorów i Funkcji Straty
-Sprawdziłem optymalizatory (SGD, Adam, AdamW) oraz funkcje straty (MSE, MAE, Huber, LogCosh).
-**Obserwacje:** * Optymalizator `SGD` bez odpowiedniego dostrajania zbiegał najwolniej. `Adam` oraz `AdamW` radziły sobie zdecydowanie najlepiej, szybko minimalizując stratę.
-* Dla danych giełdowych, świetnie sprawdziła się funkcja straty `Huber`. W odróżnieniu od klasycznego `MSE`, Huber jest mniej wrażliwy na gwałtowne piki na wykresach giełdowych, co zaowocowało stabilniejszą krzywą predykcji.
+### Logi treningu i Wykresy Predykcji
+Poniższe zrzuty ekranu przedstawiają proces uczenia obu sieci oraz ich końcowe dopasowanie do danych testowych.
 
-*[TUTAJ DODAJ SCREEN WYKRESU DLA LOSS=HUBER ORAZ OPT=ADAM]*
+#### 1. Model LSTM
+![Logi treningu LSTM](LSTM%20(1).png)
+*Rys 1. Logi z przebiegu uczenia bazowej sieci LSTM.*
 
----
+![Wykres predykcji LSTM](LSTM%20(2).png)
+*Rys 2. Porównanie rzeczywistych cen akcji IBM z predykcją modelu LSTM.*
 
-## D. Zmiana atrybutu predykcji (High na Close)
-Po zmianie kolumny targetu z dziennych maksimów ("High") na ceny zamknięcia ("Close"), zauważyłem [Wpisz czy błąd u Ciebie wzrósł czy zmalał]. Wynika to z faktu, że ceny zamknięcia posiadają inną charakterystykę zmienności wynikającą z zachowań traderów pod koniec sesji giełdowej.
+#### 2. Model GRU
+![Logi treningu GRU](GRU%20(1).png)
+*Rys 3. Logi z przebiegu uczenia bazowej sieci GRU.*
 
----
-
-## E. Early Stopping i Walidacja
-Dodałem mechanizm wczesnego zatrzymywania:
-`EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)` oraz wyznaczyłem 10% danych na zbiór walidacyjny (`validation_split=0.1`).
-**Obserwacje:** Ustawienie 100 epok "na twardo" w LSTM mija się z celem. Dzięki EarlyStopping model przerwał naukę w okolicach [WPISZ NR EPOKI] epoki. Oszczędziło to moc obliczeniową i uchroniło model przed zapamiętywaniem szumu (overfittingiem).
-
-*[TUTAJ DODAJ SCREEN Z LOGU POKAZUJĄCY ZATRZYMANIE TRENINGU PRZED 100 EPOKĄ]*
+![Wykres predykcji GRU](GRU%20(3).png)
+*Rys 4. Porównanie rzeczywistych cen akcji IBM z predykcją modelu GRU.*
 
 ---
 
-## F & G. Ostateczna i najlepsza konfiguracja (RMSE < 2.0)
-Połączenie powyższych eksperymentów pozwoliło mi uzyskać ostateczny **błąd RMSE na poziomie: [WPISZ TUTAJ SWÓJ OSTATECZNY WYNIK < 2.0]**.
+## A. Eksperymenty z ilością jednostek LSTM (Units)
 
-**Moja Najlepsza Konfiguracja:**
-* **Architektura:** GRU (za szybkość nauki)
-* **Liczba jednostek:** 64
-* **Optymalizator:** AdamW
-* **Loss:** Huber
-* **Dodatki:** EarlyStopping (patience=5)
+Przeprowadzono modyfikacje liczby neuronów w warstwach ukrytych sieci LSTM, testując skrajne warianty:
+* **Niska pojemność (units=20):** Zaobserwowano zjawisko niedouczenia (underfitting). Predykcja była zbytnio wygładzona, przez co sieć nie była w stanie poprawnie odwzorować dynamicznych zmian trendu.
+* **Wysoka pojemność (units=128):** Sieć bardzo dobrze dopasowała się do danych treningowych, jednak znacząco wydłużyło to czas obliczeń. Zbyt duża liczba parametrów bez odpowiedniej regularyzacji zwiększyła ryzyko przeuczenia (overfittingu) na szumie giełdowym. 
+* **Wniosek:** Optymalnym kompromisem dla tego zestawu danych okazała się wartość bazowa w przedziale 50-64 jednostek na warstwę.
 
-**Uzasadnienie:** Taka kombinacja pozwala wykorzystać najlepsze cechy optymalizatora adaptacyjnego, funkcję straty uodpornioną na błędy odstające oraz sieć, która nie ulega łatwemu przeuczeniu dzięki walidacji krzyżowej w trakcie trenowania.
+---
 
-*[TUTAJ DODAJ OSTATECZNY, NAJŁADNIEJSZY SCREEN WYKRESU PREDYKCJI WRAZ Z WYDRUKIEM BŁĘDÓW]*
+## B i C. Analiza optymalizatorów i funkcji straty
+
+W kolejnym etapie zbadano wpływ algorytmów optymalizacji oraz metod obliczania błędu na proces aktualizacji wag sieci.
+
+### 1. Test optymalizatora SGD
+Zastosowanie klasycznego stochastycznego spadku wzdłuż gradientu (SGD) bez zaawansowanego dostrajania parametrów (takich jak współczynnik uczenia czy momentum) okazało się mało efektywne. Model utknął w minimum lokalnym, co skutkowało wysokim błędem średniokwadratowym oraz prostoliniowym, nienaturalnym wykresem predykcji.
+
+![Wykres predykcji SGD](SGD%20(1).png)
+*Rys 5. Rezultat dopasowania modelu przy użyciu optymalizatora SGD.*
+
+### 2. Połączenie optymalizatora Adam i funkcji straty Huber
+Najwyższą dokładność uzyskano po zastąpieniu domyślnego optymalizatora `rmsprop` i funkcji `mean_squared_error` algorytmem **Adam** oraz funkcją straty **Huber**.
+* **Adam:** Jako optymalizator adaptacyjny, poprawnie dobiera oddzielne kroki uczenia dla poszczególnych wag, co znacząco przyspiesza zbieżność modelu.
+* **Huber Loss:** Funkcja ta łączy cechy MSE i MAE. Dla małych błędów zachowuje się jak błąd kwadratowy, a dla dużych - liniowo. Sprawia to, że model jest bardziej odporny na tzw. szum oraz nagłe piki cenowe typowe dla rynków finansowych, zapobiegając rozregulowaniu wag w sieci.
+
+![Predykcja Adam + Huber](adam_huber%20(1).png)
+*Rys 6. Dopasowanie modelu wykorzystującego konfigurację Adam + Huber Loss.*
+
+---
+
+## D. Zmiana atrybutu predykcji z „High” na „Close”
+
+Zmieniono kolumnę docelową z dziennej ceny maksymalnej (`High` - indeks 1) na cenę zamknięcia sesji (`Close` - indeks 3), modyfikując wywołania wycinania danych na `.iloc[:, 3:4]`.
+
+**Obserwacje:** Prognozowanie cen zamknięcia ma nieco inną dynamikę. Ceny te są wypadkową działań inwestorów na koniec dnia sesyjnego, co generuje inną strukturę trendu niż w przypadku dziennych maksimów. Sieć poprawnie zaadaptowała się do nowego celu, utrzymując stabilność, jednak potwierdziło to odmienną specyfikację tych dwóch atrybutów.
+
+![Wykres predykcji dla Close](3_4_Close%20(1).png)
+*Rys 7. Wynik predykcji dla prognozowania cen zamknięcia (Close).*
+
+---
+
+## E. Testowanie mechanizmu Early Stopping i Walidacji
+
+Aby ustrzec model przed przeuczeniem przy zadanej liczbie 100 epok, zastosowano callback `EarlyStopping`. Równocześnie, do rzetelnej oceny zdolności uogólniania sieci, wydzielono 10% danych treningowych jako zbiór walidacyjny (`validation_split=0.1`). Proces monitorowania oparto na metryce `val_loss`.
+
+**Obserwacje:** Użycie tej konfiguracji zapobiegło zjawisku overfittingu. Trening był automatycznie przerywany, gdy błąd na zbiorze walidacyjnym przestawał maleć, co oszczędziło zasoby obliczeniowe i zapobiegło memorizacji danych uczących.
+
+![Wykres Early Stopping](val_loss_earlystop.png)
+*Rys 8. Działanie mechanizmu Early Stopping bazującego na metryce val_loss.*
+
+---
+
+## F i G. Podsumowanie i Ostateczna Konfiguracja (RMSE < 2.0)
+
+Eksperymenty pokazały, że samo zwiększanie złożoności strukturalnej sieci nie gwarantuje lepszych wyników bez odpowiedniej optymalizacji hiperparametrów i zastosowania technik regularyzacji.
+
+### Ostateczna konfiguracja
+* **Architektura:** LSTM / GRU (dobierane zależnie od preferencji czas obliczeń vs nieznaczna poprawa stabilności)
+* **Liczba jednostek:** 50 - 64 na warstwę
+* **Optymalizator:** `Adam`
+* **Funkcja straty (Loss):** `Huber`
+* **Regularyzacja:** `EarlyStopping(monitor='val_loss', patience=5)` oraz `Dropout(0.2)`
+
+### Uzasadnienie
+Zastosowanie optymalizatora adaptacyjnego (Adam) w połączeniu z funkcją błędu uodpornioną na anomalie rynkowe (Huber) doprowadziło do znacznej redukcji błędu średniokwadratowego, spełniając tym samym kryterium osiągnięcia RMSE poniżej wartości 2.0. Wdrożenie podziału walidacyjnego wraz z mechanizmem Early Stopping zapewniło, że nauczony model posiada faktyczną zdolność do generalizacji trendów, zamiast jedynie odtwarzać dane z próby treningowej.
