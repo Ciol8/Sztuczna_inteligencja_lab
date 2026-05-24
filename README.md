@@ -102,14 +102,18 @@ Maksymalną liczbę epok zdefiniowano pierwotnie na 100. Podczas eksperymentu za
 
 ## F i G. Podsumowanie i Ostateczna Konfiguracja (RMSE < 2.0)
 
-Eksperymenty pokazały, że samo zwiększanie złożoności strukturalnej sieci nie gwarantuje lepszych wyników bez odpowiedniej optymalizacji hiperparametrów i zastosowania technik regularyzacji.
+Eksperymenty pokazały, że samo zwiększanie złożoności strukturalnej sieci nie gwarantuje lepszych wyników bez odpowiedniej optymalizacji hiperparametrów i zastosowania technik regularyzacji. Najwyższą precyzję działania oraz całkowitą stabilność predykcji giełdowej osiągnięto przy pełnej optymalizacji struktury opartej na jednostkach GRU.
 
 ### Ostateczna konfiguracja
-* **Architektura:** LSTM / GRU (dobierane zależnie od preferencji czas obliczeń vs nieznaczna poprawa stabilności)
-* **Liczba jednostek:** 50 - 64 na warstwę
+* **Architektura:** GRU
+* **Liczba jednostek:** 64 na warstwę
 * **Optymalizator:** `Adam`
 * **Funkcja straty (Loss):** `Huber`
-* **Regularyzacja:** `EarlyStopping(monitor='val_loss', patience=5)` oraz `Dropout(0.2)`
+* **Regularyzacja:** `EarlyStopping(monitor='val_loss', patience=8, restore_best_weights=True)`, `validation_split=0.1` oraz `Dropout(0.2)`
 
 ### Uzasadnienie
-Zastosowanie optymalizatora adaptacyjnego (Adam) w połączeniu z funkcją błędu uodpornioną na anomalie rynkowe (Huber) doprowadziło do znacznej redukcji błędu średniokwadratowego. Wdrożenie podziału walidacyjnego wraz z mechanizmem Early Stopping zapewniło, że nauczony model posiada faktyczną zdolność do generalizacji trendów, zamiast jedynie odtwarzać dane z próby treningowej.
+Zastosowanie czterowarstwowej sieci GRU o podwyższonej pojemności 64 jednostek, połączonej z optymalizatorem adaptacyjnym Adam oraz stabilną funkcją straty Huber, pozwoliło na optymalne zminimalizowanie błędów prognozy szeregu czasowego. Model ten osiągnął ostateczny błąd średniokwadratowy (RMSE) na poziomie **1.86**. Pozostałe metryki błędu również potwierdziły najwyższą jakość dopasowania w zestawieniu z innymi eksperymentami (średni błąd bezwzględny MAE ukształtował się na poziomie 1.21, natomiast średni błąd procentowy MAPE osiągnął wartość 0.76%). Wdrożenie mechanizmu Early Stopping ze zwiększonym parametrem cierpliwości (`patience=8`) oraz walidacją krzyżową skutecznie zabezpieczyło sieć przed przeuczeniem i zagwarantowało zatrzymanie procesu uczenia w punkcie maksymalnej zdolności modelu do uogólniania trendów giełdowych.
+
+<img width="642" height="485" alt="image" src="https://github.com/user-attachments/assets/8ce2b75b-bbdd-42c9-8add-1c2140d9e292" />
+<img width="326" height="103" alt="image" src="https://github.com/user-attachments/assets/e01fc4d6-bc92-4c04-ba0a-6ba371efa3c6" />
+*Rys. 13. i 14. Końcowe dopasowanie wykresu predykcji do realnych cen akcji IBM oraz podsumowanie metryk błędów dla optymalnej konfiguracji sieci GRU.*
